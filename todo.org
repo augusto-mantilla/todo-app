@@ -1,10 +1,11 @@
 * DONE Initialize the next id to the maximum Id in the webpage
 send it from the server to the client
-* TODO User interaction
+* DONE User interaction
 - [X] Insert the todo item in the html with a random id and with a lot opacity waiting for the response of the server
 - [X] When receives the response of the server updates the id and removes the opacity
 How to be sure that I'm giving the correct id to the right
-- [ ] introduce the element without the buttons and insert them after receiving the response of the server display the buttons
-- [ ] in case of network error display a message in red and give the option to retry the fetch or delete the todo item
+- [X] introduce the element without the buttons and insert them after receiving the response of the server display the buttons
+- [X] in case of network error display a message in red and give the option to retry the fetch or delete the todo item
+* TODO Improve css
 * TODO Implement websockets
 * TODO Use persistent storage

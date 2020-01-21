@@ -22,3 +22,8 @@ h1 {
   text-align: center;
   padding: 1rem;
 }
+
+.dimmed {
+  background: rgba(40, 40, 40, 0.5);
+  color: #dd8888;
+}

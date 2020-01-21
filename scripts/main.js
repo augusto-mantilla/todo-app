@@ -1,17 +1,17 @@
 const input = document.getElementById('newTodoInput')
-const button = document.getElementById('newTodoButton')
 const toRequest = document.getElementById('toRequest')
 const requested = document.getElementById('requested')
 const onDelivery = document.getElementById('onDelivery')
 const delivered = document.getElementById('delivered')
 const states = [toRequest, requested, onDelivery, delivered]
-const todos = [...document.getElementsByClassName('todoItem')]
-const deleteButtons = [...document.getElementsByClassName('deleteButton')]
-const nextButtons = [...document.getElementsByClassName('nextButton')]
-let idn = 0 // temporal id for the todos inserted in the document but
-// still pending
-const pending = [] // keeps the values of the todos inserted in the
-// document but still not received by the server
+const button = document.getElementById('newTodoButton')
+let idn = 0 // temporal id number for the todos
+
+const sections = new Map()
+sections.set('toRequest', toRequest)
+sections.set('requested', requested)
+sections.set('onDelivery', onDelivery)
+sections.set('delivered', delivered)
 
 const deleteElement = todoId => {
   const tdItem = document.getElementById(todoId)
@@ -27,58 +27,11 @@ const moveToNextColumn = todoId => {
   }
 }
 
-const nextId = () => {
-  for (const tdItem of todos) {
-  }
-}
-
-const addEventOnClick = (collection, selector, handler) => {
-  const onClick = ev => handler(ev.target.id.replace(selector, 'todo'))
-
-  for (const el of collection) {
-    el.addEventListener('click', onClick)
-  }
-}
-
 // To simulate delays in the connection with the server
 const sleep = milliseconds =>
   new Promise(resolve => setTimeout(resolve, milliseconds))
 
-const createNewTodoItem = idn => {
-  const todoItem = document.createElement('div')
-  const deleteButton = document.createElement('button')
-  const nextButton = document.createElement('button')
-  todoItem.style.cssText = 'background: rgba(40,40,40,0.5); color: #dd8888;'
-  todoItem.className = 'todoItem'
-  todoItem.id = `todotemp${idn}`
-  todoItem.innerHTML = input.value
-  deleteButton.className = 'deleteButton'
-  deleteButton.innerHTML = 'x'
-  deleteButton.id = `deleteButtontemp${idn}`
-  nextButton.innerHTML = '»'
-  nextButton.id = `nextButtontemp${idn}`
-  nextButton.className = 'nextButton'
-  todoItem.append(deleteButton)
-  todoItem.append(nextButton)
-  toRequest.append(todoItem)
-  deleteButton.addEventListener('click', () => deleteElement(todoItem.id))
-  nextButton.addEventListener('click', () => moveToNextColumn(todoItem.id))
-  input.value = ''
-  return todoItem
-}
-
-const updateTodoId = (pending, id) => {
-  todoId = `todotepm${pending}`
-  const newItem = document.getElementById(`todotemp${pending}`)
-  const newDeleteButton = document.getElementById(`deleteButtontemp${pending}`)
-  const newNextButton = document.getElementById(`nextButtontemp${pending}`)
-  newItem.style.cssText = ''
-  newItem.id = newItem.id.replace(`temp*`, id)
-  newDeleteButton.id = newDeleteButton.id.replace(`temp*`, id)
-  newNextButton.id = newNextButton.id.replace(`temp*`, id)
-}
-
-const insertTodo = pending => {
+const insertTodo = (newTodo, newDeleteButton) => {
   const myHeaders = new Headers()
 
   const myRequest = new Request('/id', {
@@ -87,10 +40,25 @@ const insertTodo = pending => {
     cache: 'default'
   })
 
-  fetchAndRetry(myRequest, pending)
+  fetchAndRetry(myRequest, newTodo, newDeleteButton)
 }
 
-const fetchAndRetry = (myRequest, pending) => {
+const createError = error => {
+  const errMessage = document.createElement('div')
+  errMessage.className = 'errorMessage'
+  errMessage.textContent = error
+  errMessage.style.color = '#ff0000'
+  return errMessage
+}
+
+const createRetryButton = () => {
+  const retryButton = document.createElement('button')
+  retryButton.className = 'retryButton'
+  retryButton.textContent = `🔄`
+  return retryButton
+}
+
+const fetchAndRetry = (myRequest, newTodo, newDeleteButton) => {
   fetch(myRequest)
     .then(response => {
       if (!response.ok) {
@@ -100,43 +68,108 @@ const fetchAndRetry = (myRequest, pending) => {
     })
     .then(async id => {
       await sleep(2000)
-      updateTodoId(pending[0], id)
-      pending.splice(0, 1)
+      newTodo.id = `todo${id}`
+      const newNextButton = createNextButton(id)
+      newNextButton.addEventListener('click', () =>
+        moveToNextColumn(newTodo.id)
+      )
+
+      newTodo.classList.remove('dimmed')
+      newDeleteButton.classList.remove('dimmed')
+      newDeleteButton.addEventListener('click', () => deleteElement(newTodo.id))
+
+      newTodo.append(newNextButton)
     })
     .catch(error => {
-      if (error.message.match('NetworkError') != null) {
-        const errMessage = document.createElement('div')
-        errMessage.innerHTML = error
-        errMessage.style.cssText = 'color: #ff0000;'
-
-        const retryButton = document.createElement('button')
-        retryButton.className = 'retryButton'
-        retryButton.innerHTML = '&#128260'
-
+      if (error.message.includes('NetworkError')) {
+        const errMessage = createError(error)
+        const retryButton = createRetryButton()
         retryButton.addEventListener('click', () => {
           errMessage.remove()
-          fetchAndRetry(myRequest, pending)
+          fetchAndRetry(myRequest, newTodo, newDeleteButton)
         })
         errMessage.append(retryButton)
         newTodo.append(errMessage)
+        document
+          .getElementById(newTodo.id.replace('todo', 'deleteButton'))
+          .addEventListener('click', () => deleteElement(newTodo.id))
       }
+      newDeleteButton.classList.remove('dimmed')
     })
+}
+
+const createTodoItem = (id, content) => {
+  const newItem = document.createElement('div')
+  newItem.className = 'todoItem'
+  newItem.id = `todo${id}`
+  newItem.innerHTML = content
+  return newItem
 }
 
 const addTodo = () => {
   if (input.value.length > 2) {
     // optimistically add the todo item with the temporary prefix
-    newTodo = createNewTodoItem(idn)
-    pending.push(idn)
+    const prefix = 'temp'
+    const newTodo = createTodoItem(prefix + idn, input.value)
+    const newDeleteButton = createDeleteButton(prefix + idn)
+    newTodo.classList.add('dimmed')
+    newDeleteButton.classList.add('dimmed')
+    newTodo.append(newDeleteButton)
+    toRequest.append(newTodo)
+    //    newDeleteButton.addEventListener('click', () => deleteElement(newTodo.id))
+    input.value = ''
+    //    pending.push(idn)
     idn++
-    insertTodo(pending)
+    insertTodo(newTodo, newDeleteButton)
   }
 }
 
-addEventOnClick(deleteButtons, 'deleteButton', deleteElement)
-addEventOnClick(nextButtons, 'nextButton', moveToNextColumn)
+const createDeleteButton = id => {
+  dltBtn = document.createElement('button')
+  dltBtn.className = 'deleteButton'
+  dltBtn.id = `deleteButton${id}`
+  dltBtn.innerHTML = 'x'
+  return dltBtn
+}
 
-// When a comment is so long that is getting until the end of the line
+const createNextButton = id => {
+  nxtBtn = document.createElement('button')
+  nxtBtn.className = 'nextButton'
+  nxtBtn.id = `nextButton${id}`
+  nxtBtn.innerHTML = '»'
+  return nxtBtn
+}
+
+const generateTodos = json => {
+  Object.entries(json).forEach(([key, value]) => {
+    for (const el of value) {
+      const todoItem = createTodoItem(el.Id, el.Content)
+      const deleteBtn = createDeleteButton(el.Id)
+
+      deleteBtn.addEventListener('click', () => deleteElement(todoItem.id))
+      todoItem.append(deleteBtn)
+
+      if (el.State !== 'delivered') {
+        const nextBtn = createNextButton(el.Id)
+        nextBtn.addEventListener('click', () => moveToNextColumn(todoItem.id))
+        todoItem.append(nextBtn)
+      }
+      sections.get(key).append(todoItem)
+    }
+  })
+}
+
+const generatePage = () => {
+  fetch('/data')
+    .then(response => response.json())
+    .then(jsn => {
+      console.log(jsn)
+      generateTodos(jsn)
+    })
+}
+
+generatePage()
+
 button.addEventListener('click', addTodo)
 
 input.addEventListener('keydown', e => {

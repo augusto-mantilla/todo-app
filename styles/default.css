@@ -1,25 +1,24 @@
 body {
-    background-color: black;
-    color: white;
-    align-items: center;
-    justify-content: center;
+  background-color: black;
+  color: white;
+  align-items: center;
+  justify-content: center;
 }
 
 .container {
-    display: flex;
-    
+  display: flex;
 }
 
 .column {
-    width: 25%;
-    justify-content: center;
+  width: 25%;
+  justify-content: center;
 }
 
 h1 {
-    text-align: center;
+  text-align: center;
 }
 
 .todoItem {
-    text-align: center;
-    padding: 1rem;
+  text-align: center;
+  padding: 1rem;
 }

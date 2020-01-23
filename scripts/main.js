@@ -90,10 +90,10 @@ const fetchAndRetry = (myRequest, newTodo, newDeleteButton) => {
         })
         errMessage.append(retryButton)
         newTodo.append(errMessage)
-        document
-          .getElementById(newTodo.id.replace('todo', 'deleteButton'))
-          .addEventListener('click', () => deleteElement(newTodo.id))
+      } else {
+        console.error(error)
       }
+      newDeleteButton.addEventListener('click', () => deleteElement(newTodo.id))
       newDeleteButton.classList.remove('dimmed')
     })
 }
